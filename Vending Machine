@@ -1,0 +1,225 @@
+/*
+    6. After a soda is "vended" update the "sale_total" and move the "sale_coins" into the "total_coins" for the machine
+    * A user adds coins and those are kept in an array on the object.
+    * An item in the machine has a cost.
+    
+    ! After an item is vended, change should be given.
+    ! After change is given, the left over coins should be moved into the internal storage.
+*/
+/*
+    Debugging Challenge
+    Figure out why we receive the error
+    "206 Uncaught TypeError: Cannot read properties of undefined (reading 'length')"
+*/
+// Ensure coins are valid
+// My rule of thumb is to put validation as late as possible in the process
+// NOTE: Pretend this is loaded from a database
+var Penny = {
+    name: "Penny",
+    value: 0.01
+};
+var Nickel = {
+    name: "Nickel",
+    value: 0.05
+};
+var Dime = {
+    name: "Dime",
+    value: 0.1
+};
+var Quarter = {
+    name: "Quarter",
+    value: 0.25
+};
+Penny.next = Nickel;
+Penny.previous = null;
+Nickel.next = Dime;
+Nickel.previous = Penny;
+Dime.next = Quarter;
+Dime.previous = Nickel;
+Quarter.next = null;
+Quarter.previous = Dime;
+// NOTE: "previous" denotes the next lowest coin; "next" denotes the next highest coin
+var validCoinsByValue = {
+    "0.25": Quarter,
+    "0.1": Dime,
+    "0.05": Nickel,
+    "0.01": Penny
+};
+// My rule of thumb is the rule of 3s
+// * An item in the machine has a cost.
+var items = {
+    coke: 0.50
+};
+// USER PROVIDED COINS
+// * A user adds coins and those are kept in an array on the object.
+var coins = [];
+var runningTotal = 0;
+// NOTE: Possibilities for using an object to store coins
+var coinsByValue = {};
+// Will be one of two things:
+// 1. null - No coins have been inserted
+// 2. A decimal/float
+var highestValueCoin = null;
+// Step 1: remove ambiguity 
+// Step 2: Be iterative -- Test frequently
+function addCoin(coin) {
+    /*
+        coin = {
+            name: "Quater",
+            value: 0.25
+        };
+    */
+    console.log("Adding coin: " + JSON.stringify(coin, null, 2));
+    runningTotal = ((runningTotal * 100) + (coin.value * 100)) / 100;
+    console.log("Running total: " + runningTotal);
+    coins.push(coin);
+    // TODO: Validate the coin is valid
+    if (validCoinsByValue[coin.value] === undefined) {
+        gs.error("Invalid coin: " + JSON.stringify(coin, null, 2));
+        return;
+    }
+    // TODO: Add validation for coin schema
+    if (coinsByValue[coin.value] === undefined) {
+        coinsByValue[coin.value] = [];
+    }
+    coinsByValue[coin.value].push(coin);
+    if (highestValueCoin === null) {
+        highestValueCoin = coin.value;
+    } else if (coin.value > highestValueCoin) {
+        highestValueCoin = coin.value;
+    }
+}
+// ! After an item is vended, change should be given.
+function vend(selection) {
+    console.log("Vending: " + selection);
+    // NOTE: Assume that the vend process is working correctly
+    // NOTE: Assume that the cost is $1
+    // NOTE: Assume that runnning total of coins in machine is -$1
+}
+function getNextCoinsToReturn(currentValue) {
+    var coinValue = currentValue;
+    var coinsToReturn = coinsByValue[coinValue];
+    var currentCoin;
+    /*
+        var Dime = {
+            name: "Dime",
+            value: 0.1
+        };
+    */
+    console.log("currentValue: " + currentValue);
+    // console.log("coinsToReturn.length: " + coinsToReturn.length);
+    if (coinsToReturn !== undefined && coinsToReturn.length > 0) {
+        console.log("coinsToReturn.length > 0: " + (coinsToReturn.length > 0));
+        // console.log("validCoinsByValue[coinValue]" + JSON.stringify(validCoinsByValue, null, 2));
+        return {
+            // coinDefinition: validCoinsByValue[coinValue],
+            coins: coinsToReturn
+        };
+    } else {
+        currentCoin = validCoinsByValue[coinValue];
+        previousCoin = currentCoin.previous;
+        if (previousCoin === null) {
+            return [];
+        }
+        previousCoinValue = previousCoin.value;
+        if (previousCoinValue === undefined) {
+            // TODO: Should this error?
+            return [];
+        }
+        return getNextCoinsToReturn(previousCoinValue);
+    }
+}
+function dispenseCoins(coinValue) {
+    console.log("dispensing: " + coinValue);
+    var coinsToReturnInformation = getNextCoinsToReturn(coinValue);
+    console.log("coinsToReturnInformation: " + JSON.stringify(coinsToReturnInformation, null, 2));
+    var coinsToReturn = coinsToReturnInformation.coins;
+    var coinDefinition = validCoinsByValue[coinValue];
+    var previousCoin = coinDefinition.previous;
+    var numberOfCoins = coinsToReturn.length;
+    var coinToReturn;
+    var i;
+    console.log("Coins to return: " + JSON.stringify(coinsToReturn, null, 2));
+    // keep a running total of everything that's returned, and return coins in order until amount to be returned is 0
+    for (i = 0; i < numberOfCoins; i++) {
+        coinToReturn = coinsToReturn.shift();
+        console.log("Giving the user a " + coinToReturn.name);
+        // runningTotal -= coinToReturn.value;
+        // runningTotal = runningTotal - coinToReturn.value;
+        // FIXME: Floating point issues with this line
+        runningTotal = (((runningTotal * 100) - (coinToReturn.value * 100)) / 100).toFixed(2);
+        console.log("New running total: " + runningTotal);
+    }
+    console.log("coinsByValue: " + JSON.stringify(coinsByValue, null, 2));
+    if (previousCoin !== null) {
+        console.log("previousCoin.name: " + previousCoin.name);
+        dispenseCoins(previousCoin.value);
+    }
+}
+function giveChange() {
+    debugger;
+    // NOTE: Assuming that when giveChange executes, that the cost of the soda has been deducted already
+    // NOTE: Assuming that the only coins left in `coins` array (and any maps that exist) is the change to be given
+    // NOTE: Assuming that highestValueCoin has a value that isn't null
+    // Should give an array of coins that have the highest value
+    console.log("highestValueCoin: " + highestValueCoin);
+    dispenseCoins(highestValueCoin);
+    // if (coinDefinition.previous) {
+    //     coinsToReturnInformation = getNextCoinsToReturn(coinDefinition.value);
+    // }
+    // loop over coins to return, subtract from the running total
+    // "return the coin to the user"
+    // coinsToReturn.length * highestValueCoin = total amount of money available in those coins
+}
+// ! After change is given, the left over coins should be moved into the internal storage.
+// COINS INSIDE THE MACHINE AFTER VENDING
+var internalStorageOfCoins = [];
+function storeCoins() {
+}
+/*
+How to default values
+function stockMachine(availableInventory) {
+    var inventory = availableInventory || {
+        coke: 5,
+        drpepper:2
+    };
+}
+*/
+// TODO: Remove this before production
+addCoin({
+    name: "Penny",
+    value: 0.01
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Quarter",
+    value: 0.25
+});
+addCoin({
+    name: "Nickel",
+    value: 0.05
+});
+giveChange();
